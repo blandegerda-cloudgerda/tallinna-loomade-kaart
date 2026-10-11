@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tallinna loodame varjupaikade andmed</title>
+
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 10px;
+    }
+
+    #kaardikiht {
+      width: 100%;
+      height: 75vh;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Tallinna loomade abistamise kohad</h1>
+  <p id="staatus" style="text-align:center;">Laadin kaarti...</p>
+  <div id="kaardikiht"></div>
+
+  <script>
+    let kaart;
+
+    const ANDMETE_URL = "https://script.google.com/macros/s/AKfycbws5S4xQGKfO6sc12VPCdTmAXkHDyvY1VJqFvML7PvEpeQR49ntv2ZrvzFMfPKvE0Kf/exec";
+
+    function algus() {
+      kaart = L.map("kaardikiht").setView([59.439, 24.773], 12);
+
+      L.tileLayer(
+        "https://tiles.maaamet.ee/tm/tms/1.0.0/hybriid@GMC/{z}/{x}/{y}.png&ASUTUS=TLU&ERIALA=DIGIHUMANITAARIA",
+        {
+          attribution: "Kaart: Maa-amet",
+          tms: true
+        }
+      ).addTo(kaart);
+
+      fetch(ANDMETE_URL)
+        .then(vastus => vastus.json())
+        .then(kuva)
+        .catch(viga => {
+          console.error(viga);
+          document.getElementById("staatus").innerText =
+            "Andmete laadimine ebaõnnestus.";
+        });
+    }
+
+    function kuva(andmed) {
+      for (let i = 1; i < andmed.length; i++) {
+        let koht = andmed[i];
+
+        let nimi = koht[0];
+        let laius = Number(koht[1]);
+        let pikkus = Number(koht[2]);
+        let kirjeldus = koht[3];
+
+        if (!nimi || !Number.isFinite(laius) ||
+            !Number.isFinite(pikkus)) {
+          continue;
+        }
+
+        L.marker([laius, pikkus])
+          .addTo(kaart)
+          .bindPopup(
+            "<b>" + turvaline(nimi) + "</b><br>" +
+            turvaline(kirjeldus || "")
+          );
+      }
+
+      document.getElementById("staatus").innerText =
+        "Andmed on kaardile lisatud.";
+    }
+
+    function turvaline(tekst) {
+      return String(tekst).replace(/[&<>"']/g, function(taht) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[taht];
+      });
+    }
+
+    algus();
+  </script>
+</body>
+</html>
